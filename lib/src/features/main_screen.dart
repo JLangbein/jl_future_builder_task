@@ -8,6 +8,9 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  final _controller = TextEditingController();
+  Future<String>? _futureCity;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -18,6 +21,8 @@ class _MainScreenState extends State<MainScreen> {
             spacing: 32,
             children: [
               TextFormField(
+                controller: _controller,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: "Postleitzahl",
@@ -25,13 +30,48 @@ class _MainScreenState extends State<MainScreen> {
               ),
               OutlinedButton(
                 onPressed: () {
-                  // TODO: implementiere Suche
+                  setState(() {
+                    _futureCity = getCityFromZip(_controller.text);
+                  });
                 },
                 child: const Text("Suche"),
               ),
-              Text(
-                "Ergebnis: Noch keine PLZ gesucht",
-                style: Theme.of(context).textTheme.labelLarge,
+              FutureBuilder<String>(
+                future: _futureCity,
+                builder: (context, snapshot) {
+                  // still waiting on data
+                  if (_futureCity != null &&
+                      snapshot.connectionState != ConnectionState.done) {
+                    return CircularProgressIndicator();
+                  }
+                  // something went wrong
+                  if (snapshot.hasError) {
+                    return Row(
+                      spacing: 4.0,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_rounded,
+                          color: Colors.red,
+                          size: 24.0,
+                        ),
+                        Text('${snapshot.error}'),
+                      ],
+                    );
+                  }
+                  // success
+                  if (snapshot.hasData) {
+                    return Text(
+                      'Ergebnis: ${snapshot.data}',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    );
+                  }
+                  // if all else fails
+                  return Text(
+                    "Ergebnis: Noch keine PLZ gesucht",
+                    style: Theme.of(context).textTheme.labelLarge,
+                  );
+                },
               ),
             ],
           ),
@@ -42,7 +82,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    // TODO: dispose controllers
+    _controller.dispose();
     super.dispose();
   }
 
@@ -63,7 +103,8 @@ class _MainScreenState extends State<MainScreen> {
       case "60313":
         return 'Frankfurt am Main';
       default:
-        return 'Unbekannte Stadt';
+        //return 'Unbekannte Stadt';
+        throw Exception('Unbekannte Stadt');
     }
   }
 }
